@@ -170,3 +170,11 @@ test('flat (non-nested) boundaries keep working exactly as before', () => {
   assert.equal(receipt.ok, true, receipt.error);
   assert.equal(receipt.validation.errors, 0);
 });
+test('a long inner label with default outer pad that pushes the inner frame outside is rejected', () => {
+  const spec = baseSpec();
+  spec.boundaries[1].pad = 30;
+  spec.boundaries[0].label = 'This Is A Deliberately Very Long Checkout Subsystem Label To Overflow The Outer Frame';
+  const { receipt } = deliver(writeSpec('containment-overflow', spec));
+  assert.equal(receipt.ok, false);
+  assert.match(receipt.error, /extends outside the outer frame/);
+});

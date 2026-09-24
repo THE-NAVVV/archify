@@ -571,6 +571,24 @@ function validateArchitecture() {
       );
     }
   }
+  // Title composition can independently widen the inner boundary's frame
+  // (expandBoundaryForReadableTitle) without recomputing the outer boundary
+  // around that final geometry. Catch the case where a long inner label pushes
+  // the inner frame outside its declared outer frame — this is separate from
+  // the deployment-ownership-only membership/containment check below, which
+  // never runs for ordinary architecture diagrams.
+  for (const outer of boundaries) {
+    for (const id of asArray(outer.wraps)) {
+      if (!boundaryById.has(id)) continue;
+      const inner = boundaries.find((candidate) => candidate.id === id);
+      if (inner && !rectContains(outer, inner)) {
+        problems.push(
+          `Boundary "${outer.label}" nests boundary "${inner.label}", but the final inner frame extends outside the outer frame — `
+          + `increase "${outer.label}" pad or shorten the "${inner.label}" label.`,
+        );
+      }
+    }
+  }
   for (let leftIndex = 0; leftIndex < boundaries.length; leftIndex += 1) {
     const left = boundaries[leftIndex];
     const leftMembers = new Set(asArray(left.wraps));

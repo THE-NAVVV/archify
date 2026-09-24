@@ -148,11 +148,10 @@ also cover the directly-wrapped `shared-cache` sitting alongside it.
 `cart-svc`'s reported scope chain is `"Platform › Checkout Subsystem"`
 even though `cart-svc` is not listed in `platform.wraps` directly.
 
-A connection may reference a boundary's own `id` in `from`/`to` to attach
-at the boundary's frame edge instead of a specific component inside it —
-that capability is tracked separately (see #284/#317) and composes with
-nesting: an edge can originate or terminate on either `checkout-subsystem`
-or `platform`, at whichever level the diagram should stay abstract.
+Boundary endpoints are not supported by the current renderer. Until that
+capability is implemented, `from` and `to` must reference component IDs.
+Boundary IDs such as `checkout-subsystem` and `platform` produce validation
+errors when used as connection endpoints.
 
 ## Title hierarchy
 
@@ -173,6 +172,46 @@ in the generated viewer.
 - Shared endpoint corridors are allowed only when they remain semantically unambiguous. Unrelated collinear overlap of 8px or more fails showcase.
 - Container borders are intentional pass-through geometry, but a long edge running along a structural border is not.
 - An edge crossing an unrelated opaque node is always a hard failure, independent of quality profile.
+
+### Explicit `via` coordinates
+
+Use the resolved departure anchor `S = [sx, sy]` and arrival anchor
+`T = [tx, ty]`. Anchors start at side midpoints, but automatic routing and
+Port Spread can move them as described above; do not assume an anchor copied
+from an automatic route is the anchor of a newly authored explicit route.
+Explicit `via` routes do not receive automatic Port Spread.
+
+For the first waypoint `F = via[0]` and last waypoint `L = via[via.length - 1]`,
+use these alignments and directions (SVG y increases downward):
+
+| Side | Departure (`fromSide`): `S` → `F` | Arrival (`toSide`): `L` → `T` |
+| --- | --- | --- |
+| `top` | `F[0] === sx`, `F[1] < sy` | `L[0] === tx`, `L[1] < ty` |
+| `bottom` | `F[0] === sx`, `F[1] > sy` | `L[0] === tx`, `L[1] > ty` |
+| `left` | `F[1] === sy`, `F[0] < sx` | `L[1] === ty`, `L[0] < tx` |
+| `right` | `F[1] === sy`, `F[0] > sx` | `L[1] === ty`, `L[0] > tx` |
+
+For example, given a bottom departure anchor `S = [180, 160]` and a left
+arrival anchor `T = [360, 260]`, this relationship fragment leaves downward
+and enters the target rightward:
+
+```json
+{
+  "from": "source",
+  "to": "target",
+  "fromSide": "bottom",
+  "toSide": "left",
+  "via": [[180, 200], [300, 200], [300, 260]]
+}
+```
+
+The full path is `[180, 160] → [180, 200] → [300, 200] → [300, 260] → [360, 260]`.
+Changing only the first waypoint to `[200, 200]` makes the departure diagonal;
+changing it to `[180, 120]` keeps its x aligned but leaves upward through the
+source instead of outward from its bottom. Both violate `fromSide: "bottom"`
+and produce `clean-flow/endpoint-side-direction`. The example establishes
+endpoint direction only: keep the full route clear of unrelated nodes and
+apply the other geometry rules above.
 
 ### Spacing and labels
 
